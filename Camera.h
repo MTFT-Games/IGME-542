@@ -53,7 +53,7 @@ public:
 	void Update(float dt);
 
 	// Show Imgui stats for this camera
-	void ImGuiUpdate();
+	//void ImGuiUpdate();
 
 private:
 	// Recalculates the projection matrix for any new settings

@@ -1,6 +1,6 @@
 #include "Camera.h"
 #include "Input.h"
-#include "ImGui/imgui.h"
+//#include "ImGui/imgui.h"
 
 using namespace DirectX;
 
@@ -121,7 +121,7 @@ void Camera::Update(float dt)
     }
 }
 
-void Camera::ImGuiUpdate()
+/*void Camera::ImGuiUpdate()
 {
     XMFLOAT3 camPos = transform.GetPosition();
     ImGui::Text("Position: %f, %f, %f", camPos.x, camPos.y, camPos.z);
@@ -133,7 +133,7 @@ void Camera::ImGuiUpdate()
     ImGui::Text("Aspect ratio: %f", aspectRatio);
     ImGui::Text("Sensetivity: %f", mouseSenetivity);
 
-}
+}*/
 
 void Camera::UpdateProjectionMatrix()
 {
