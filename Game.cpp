@@ -67,6 +67,12 @@ void Game::Init()
 	// - You'll be expanding and/or replacing these later
 	CreateRootSigAndPipelineState();
 	CreateBasicGeometry();
+	camera = std::make_shared<Camera>(
+		windowWidth / (float)windowHeight, 
+		XMFLOAT3(0, 0, -3), 
+		XMFLOAT3(), 
+		3.14f / 2);
+
 }
 
 // --------------------------------------------------------
@@ -280,6 +286,7 @@ void Game::OnResize()
 {
 	// Handle base-level DX resize stuff
 	DXCore::OnResize();
+	camera->SetAspect((float)(windowWidth / windowHeight));
 }
 
 // --------------------------------------------------------
@@ -290,6 +297,8 @@ void Game::Update(float deltaTime, float totalTime)
 	// Example input checking: Quit if the escape key is pressed
 	if (Input::GetInstance().KeyDown(VK_ESCAPE))
 		Quit();
+
+	camera->Update(deltaTime);
 }
 
 // --------------------------------------------------------
