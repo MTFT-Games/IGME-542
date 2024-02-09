@@ -2,7 +2,6 @@
 #include "Vertex.h"
 #include "Input.h"
 #include "PathHelpers.h"
-#include "DX12Helper.h"
 
 // Needed for a helper function to load pre-compiled shader files
 #pragma comment(lib, "d3dcompiler.lib")
@@ -28,7 +27,8 @@ Game::Game(HINSTANCE hInstance)
 		false,				// Sync the framerate to the monitor refresh? (lock framerate)
 		true),  			// Show extra stats (fps) in title bar?
 	ibView({}),
-	vbView({})
+	vbView({}),
+	dx12Helper(DX12Helper::GetInstance())
 {
 #if defined(DEBUG) || defined(_DEBUG)
 	// Do we want a console window?  Probably only in debug mode
@@ -53,7 +53,7 @@ Game::~Game()
 
 	// We need to wait here until the GPU
 	// is actually done with its work
-	DX12Helper::GetInstance().WaitForGPU();
+	dx12Helper.WaitForGPU();
 }
 
 // --------------------------------------------------------
@@ -274,6 +274,22 @@ void Game::CreateBasicGeometry()
 	ibView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
 	*/
 	// ^^ use meshes now. i should prob just delet this but thats a later problem
+
+	meshList.push_back(std::make_shared<Mesh>(FixPath(L"../../Assets/Models/cube.obj").c_str()));
+	meshList.push_back(std::make_shared<Mesh>(FixPath(L"../../Assets/Models/cylinder.obj").c_str()));
+	meshList.push_back(std::make_shared<Mesh>(FixPath(L"../../Assets/Models/helix.obj").c_str()));
+	meshList.push_back(std::make_shared<Mesh>(FixPath(L"../../Assets/Models/quad.obj").c_str()));
+	meshList.push_back(std::make_shared<Mesh>(FixPath(L"../../Assets/Models/quad_double_sided.obj").c_str()));
+	meshList.push_back(std::make_shared<Mesh>(FixPath(L"../../Assets/Models/sphere.obj").c_str()));
+	meshList.push_back(std::make_shared<Mesh>(FixPath(L"../../Assets/Models/torus.obj").c_str()));
+
+	renderableList.push_back(Renderable(meshList[0], XMFLOAT3(0, 0, 0)));
+	renderableList.push_back(Renderable(meshList[1], XMFLOAT3(2, 0, 0)));
+	renderableList.push_back(Renderable(meshList[2], XMFLOAT3(3, 0, 0)));
+	renderableList.push_back(Renderable(meshList[3], XMFLOAT3(-1, 0, 0)));
+	renderableList.push_back(Renderable(meshList[4], XMFLOAT3(1, 0, 0)));
+	renderableList.push_back(Renderable(meshList[5], XMFLOAT3(-2, 0, 0)));
+	renderableList.push_back(Renderable(meshList[6], XMFLOAT3(3, 0, 0)));
 }
 
 
@@ -297,6 +313,11 @@ void Game::Update(float deltaTime, float totalTime)
 	// Example input checking: Quit if the escape key is pressed
 	if (Input::GetInstance().KeyDown(VK_ESCAPE))
 		Quit();
+
+	for (size_t i = 0; i < renderableList.size(); i++)
+	{
+		renderableList[i].GetTransform().Rotate(1,1,1);
+	}
 
 	camera->Update(deltaTime);
 }
@@ -346,17 +367,22 @@ void Game::Draw(float deltaTime, float totalTime)
 
 		// Root sig (must happen before root descriptor table)
 		commandList->SetGraphicsRootSignature(rootSignature.Get());
+		
+		// Descriptor heap
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorHeap =
+			dx12Helper.GetCBVSRVDescriptorHeap();
+		commandList->SetDescriptorHeaps(1, descriptorHeap.GetAddressOf());
 
 		// Set up other commands for rendering
 		commandList->OMSetRenderTargets(1, &rtvHandles[currentSwapBuffer], true, &dsvHandle);
 		commandList->RSSetViewports(1, &viewport);
 		commandList->RSSetScissorRects(1, &scissorRect);
-		commandList->IASetVertexBuffers(0, 1, &vbView);
-		commandList->IASetIndexBuffer(&ibView);
+		//commandList->IASetVertexBuffers(0, 1, &vbView);
+		//commandList->IASetIndexBuffer(&ibView);
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 		// Draw
-		commandList->DrawIndexedInstanced(3, 1, 0, 0, 0);
+		//commandList->DrawIndexedInstanced(3, 1, 0, 0, 0);
 	}
 
 	// Present
