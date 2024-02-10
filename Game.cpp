@@ -2,6 +2,7 @@
 #include "Vertex.h"
 #include "Input.h"
 #include "PathHelpers.h"
+#include "BufferStructs.h"
 
 // Needed for a helper function to load pre-compiled shader files
 #pragma comment(lib, "d3dcompiler.lib")
@@ -377,12 +378,27 @@ void Game::Draw(float deltaTime, float totalTime)
 		commandList->OMSetRenderTargets(1, &rtvHandles[currentSwapBuffer], true, &dsvHandle);
 		commandList->RSSetViewports(1, &viewport);
 		commandList->RSSetScissorRects(1, &scissorRect);
-		//commandList->IASetVertexBuffers(0, 1, &vbView);
-		//commandList->IASetIndexBuffer(&ibView);
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 		// Draw
-		//commandList->DrawIndexedInstanced(3, 1, 0, 0, 0);
+		for (size_t i = 0; i < renderableList.size(); i++)
+		{
+			VertexShaderExternalData vertexShaderData = {};
+			vertexShaderData.world = renderableList[i].GetTransform().GetWorldMatrix();
+			vertexShaderData.view = camera->GetView();
+			vertexShaderData.projection = camera->GetProjection();
+
+			D3D12_GPU_DESCRIPTOR_HANDLE vsbDescriptorHandle = dx12Helper.FillNextConstantBufferAndGetGPUDescriptorHandle(&vertexShaderData, sizeof(VertexShaderExternalData));
+			commandList->SetGraphicsRootDescriptorTable(0, vsbDescriptorHandle);
+
+			D3D12_VERTEX_BUFFER_VIEW vbView = renderableList[i].GetMesh()->GetvbView();
+			D3D12_INDEX_BUFFER_VIEW ibView = renderableList[i].GetMesh()->GetibView();
+
+			commandList->IASetVertexBuffers(0, 1, &vbView);
+			commandList->IASetIndexBuffer(&ibView);
+
+			commandList->DrawIndexedInstanced(renderableList[i].GetMesh()->GetIndexCount(), 1, 0, 0, 0);
+		}
 	}
 
 	// Present
