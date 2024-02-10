@@ -285,12 +285,12 @@ void Game::CreateBasicGeometry()
 	meshList.push_back(std::make_shared<Mesh>(FixPath(L"../../Assets/Models/torus.obj").c_str()));
 
 	renderableList.push_back(Renderable(meshList[0], XMFLOAT3(0, 0, 0)));
-	renderableList.push_back(Renderable(meshList[1], XMFLOAT3(2, 0, 0)));
+	renderableList.push_back(Renderable(meshList[1], XMFLOAT3(0, 3, 0)));
 	renderableList.push_back(Renderable(meshList[2], XMFLOAT3(3, 0, 0)));
-	renderableList.push_back(Renderable(meshList[3], XMFLOAT3(-1, 0, 0)));
-	renderableList.push_back(Renderable(meshList[4], XMFLOAT3(1, 0, 0)));
-	renderableList.push_back(Renderable(meshList[5], XMFLOAT3(-2, 0, 0)));
-	renderableList.push_back(Renderable(meshList[6], XMFLOAT3(3, 0, 0)));
+	renderableList.push_back(Renderable(meshList[3], XMFLOAT3(-3, 3, 0)));
+	renderableList.push_back(Renderable(meshList[4], XMFLOAT3(3, 3, 0)));
+	renderableList.push_back(Renderable(meshList[5], XMFLOAT3(-3, 0, 0)));
+	renderableList.push_back(Renderable(meshList[6], XMFLOAT3(0, -3, 0)));
 }
 
 
@@ -317,7 +317,7 @@ void Game::Update(float deltaTime, float totalTime)
 
 	for (size_t i = 0; i < renderableList.size(); i++)
 	{
-		renderableList[i].GetTransform().Rotate(1,1,1);
+		renderableList[i].GetTransform().Rotate(0.01f, 0.01f, 0.01f);
 	}
 
 	camera->Update(deltaTime);

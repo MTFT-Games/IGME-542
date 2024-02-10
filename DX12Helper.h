@@ -65,8 +65,8 @@ private:
 
 	// Basic CPU/GPU synchronization
 	Microsoft::WRL::ComPtr<ID3D12Fence> waitFence;
-	HANDLE waitFenceEvent;
-	unsigned long waitFenceCounter;
+	HANDLE waitFenceEvent = 0;
+	unsigned long waitFenceCounter = 0;
 
 	// Maximum number of constant buffers, assuming each buffer
 	// is 256 bytes or less. Larger buffers are fine, but will
@@ -75,14 +75,14 @@ private:
 
 	// GPU-side constant buffer upload heap
 	Microsoft::WRL::ComPtr<ID3D12Resource> cbUploadHeap;
-	UINT64 cbUploadHeapSizeInBytes;
-	UINT64 cbUploadHeapOffsetInBytes;
-	void* cbUploadHeapStartAddress;
+	UINT64 cbUploadHeapSizeInBytes = 0;
+	UINT64 cbUploadHeapOffsetInBytes = 0;
+	void* cbUploadHeapStartAddress = NULL;
 
 	// GPU-side CBV/SRV descriptor heap
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> cbvSrvDescriptorHeap;
-	SIZE_T cbvSrvDescriptorHeapIncrementSize;
-	unsigned int cbvDescriptorOffset;
+	SIZE_T cbvSrvDescriptorHeapIncrementSize = 0;
+	unsigned int cbvDescriptorOffset = 0;
 
 	void CreateConstantBufferUploadHeap();
 	void CreateCBVSRVDescriptorHeap();
