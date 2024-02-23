@@ -3,6 +3,7 @@
 #include "Input.h"
 #include "PathHelpers.h"
 #include "BufferStructs.h"
+#include "WICTextureLoader.h"
 
 // Needed for a helper function to load pre-compiled shader files
 #pragma comment(lib, "d3dcompiler.lib")
@@ -73,7 +74,35 @@ void Game::Init()
 		XMFLOAT3(0, 0, -3), 
 		XMFLOAT3(), 
 		3.14f / 2);
+	
+	lights[0].Type = LIGHT_TYPE_DIRECTIONAL;
+	lights[0].Direction = XMFLOAT3(0, -0.8f, 0.2f);
+	lights[0].Color = XMFLOAT3(1.0f, 1.0f, 1.0f);
+	lights[0].intensity = 1.0f;
 
+	lights[1].Type = LIGHT_TYPE_DIRECTIONAL;
+	lights[1].Direction = XMFLOAT3(-1, 0, 0);
+	lights[1].Color = XMFLOAT3(0.76f, 0.76f, 0.76f);
+	lights[1].intensity = 0.4f;
+
+	lights[2].Type = LIGHT_TYPE_DIRECTIONAL;
+	lights[2].Direction = XMFLOAT3(1, 0, 0);
+	lights[2].Color = XMFLOAT3(0.36f, 0.36f, 0.36f);
+	lights[2].intensity = 0.7f;
+
+	lights[3].Type = LIGHT_TYPE_POINT;
+	lights[3].Position = XMFLOAT3(0, -3, 0);
+	lights[3].Color = XMFLOAT3(0, 0.7f, 0.8f);
+	lights[3].intensity = 1.0f;
+	lights[3].Range = 5;
+
+	lights[4].Type = LIGHT_TYPE_POINT;
+	lights[4].Position = XMFLOAT3(-1, 0, 1);
+	lights[4].Color = XMFLOAT3(0.8f, 0.1f, 0.2f);
+	lights[4].intensity = 0.4f;
+	lights[4].Range = 5;
+
+	lightCount = 5;
 }
 
 // --------------------------------------------------------
@@ -317,6 +346,28 @@ void Game::CreateBasicGeometry()
 	ibView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
 	*/
 	// ^^ use meshes now. i should prob just delet this but thats a later problem
+	D3D12_CPU_DESCRIPTOR_HANDLE cobblestoneAlbedo = dx12Helper.LoadTexture(L"cobblestone_albedo.png");
+	D3D12_CPU_DESCRIPTOR_HANDLE cobblestoneMetal = dx12Helper.LoadTexture(L"cobblestone_metal.png");
+	D3D12_CPU_DESCRIPTOR_HANDLE cobblestoneNormals = dx12Helper.LoadTexture(L"cobblestone_normals.png");
+	D3D12_CPU_DESCRIPTOR_HANDLE cobblestoneRoughness = dx12Helper.LoadTexture(L"cobblestone_roughness.png");
+	D3D12_CPU_DESCRIPTOR_HANDLE scratchedAlbedo = dx12Helper.LoadTexture(L"scratched_albedo.png");
+	D3D12_CPU_DESCRIPTOR_HANDLE scratchedMetal = dx12Helper.LoadTexture(L"scratched_metal.png");
+	D3D12_CPU_DESCRIPTOR_HANDLE scratchedNormals = dx12Helper.LoadTexture(L"scratched_normals.png");
+	D3D12_CPU_DESCRIPTOR_HANDLE scratchedRoughness = dx12Helper.LoadTexture(L"scratched_roughness.png");
+
+	std::shared_ptr<Material> cobbleMaterial = std::make_shared<Material>(pipelineState, XMFLOAT3(1, 1, 1), XMFLOAT2(1, 1), XMFLOAT2(0, 0));
+	cobbleMaterial->AddTexture(cobblestoneAlbedo, 0);
+	cobbleMaterial->AddTexture(cobblestoneNormals, 1);
+	cobbleMaterial->AddTexture(cobblestoneMetal, 2);
+	cobbleMaterial->AddTexture(cobblestoneRoughness, 3);
+	cobbleMaterial->FinalizeMaterial();
+
+	std::shared_ptr<Material> scratchedMaterial = std::make_shared<Material>(pipelineState, XMFLOAT3(1, 1, 1), XMFLOAT2(1, 1), XMFLOAT2(0, 0));
+	scratchedMaterial->AddTexture(scratchedAlbedo, 0);
+	scratchedMaterial->AddTexture(scratchedNormals, 1);
+	scratchedMaterial->AddTexture(scratchedMetal, 2);
+	scratchedMaterial->AddTexture(scratchedRoughness, 3);
+	scratchedMaterial->FinalizeMaterial();
 
 	meshList.push_back(std::make_shared<Mesh>(FixPath(L"../../Assets/Models/cube.obj").c_str()));
 	meshList.push_back(std::make_shared<Mesh>(FixPath(L"../../Assets/Models/cylinder.obj").c_str()));
@@ -326,13 +377,13 @@ void Game::CreateBasicGeometry()
 	meshList.push_back(std::make_shared<Mesh>(FixPath(L"../../Assets/Models/sphere.obj").c_str()));
 	meshList.push_back(std::make_shared<Mesh>(FixPath(L"../../Assets/Models/torus.obj").c_str()));
 
-	renderableList.push_back(Renderable(meshList[0], XMFLOAT3(0, 0, 0)));
-	renderableList.push_back(Renderable(meshList[1], XMFLOAT3(0, 3, 0)));
-	renderableList.push_back(Renderable(meshList[2], XMFLOAT3(3, 0, 0)));
-	renderableList.push_back(Renderable(meshList[3], XMFLOAT3(-3, 3, 0)));
-	renderableList.push_back(Renderable(meshList[4], XMFLOAT3(3, 3, 0)));
-	renderableList.push_back(Renderable(meshList[5], XMFLOAT3(-3, 0, 0)));
-	renderableList.push_back(Renderable(meshList[6], XMFLOAT3(0, -3, 0)));
+	renderableList.push_back(Renderable(meshList[0], cobbleMaterial, XMFLOAT3(0, 0, 0)));
+	renderableList.push_back(Renderable(meshList[1], cobbleMaterial, XMFLOAT3(0, 3, 0)));
+	renderableList.push_back(Renderable(meshList[2], cobbleMaterial, XMFLOAT3(3, 0, 0)));
+	renderableList.push_back(Renderable(meshList[3], cobbleMaterial, XMFLOAT3(-3, 3, 0)));
+	renderableList.push_back(Renderable(meshList[4], scratchedMaterial, XMFLOAT3(3, 3, 0)));
+	renderableList.push_back(Renderable(meshList[5], scratchedMaterial, XMFLOAT3(-3, 0, 0)));
+	renderableList.push_back(Renderable(meshList[6], scratchedMaterial, XMFLOAT3(0, -3, 0)));
 }
 
 
@@ -405,8 +456,6 @@ void Game::Draw(float deltaTime, float totalTime)
 
 	// Rendering here!
 	{
-		// Set overall pipeline state
-		commandList->SetPipelineState(pipelineState.Get());
 
 		// Root sig (must happen before root descriptor table)
 		commandList->SetGraphicsRootSignature(rootSignature.Get());
@@ -425,10 +474,39 @@ void Game::Draw(float deltaTime, float totalTime)
 		// Draw
 		for (size_t i = 0; i < renderableList.size(); i++)
 		{
+			std::shared_ptr<Material> mat = renderableList[i].GetMaterial();
+			commandList->SetPipelineState(mat->GetPipelineState().Get());
+			// Set the SRV descriptor handle for this material's textures
+			// Note: This assumes that descriptor table 2 is for textures (as per our root sig)
+			commandList->SetGraphicsRootDescriptorTable(2, mat->GetFinalGPUHandleForSRVs());
+			
+			// Pixel shader data and cbuffer setup
+			{
+				PixelShaderExternalData psData = {};
+				psData.uvScale = mat->GetUVScale();
+				psData.uvOffset = mat->GetUVOffset();
+				psData.cameraPosition = camera->GetPosition();
+				psData.lightCount = lightCount;
+				memcpy(psData.lights, &lights[0], sizeof(Light) * 20);
+				
+				// Send this to a chunk of the constant buffer heap
+				// and grab the GPU handle for it so we can set it for this draw
+				D3D12_GPU_DESCRIPTOR_HANDLE cbHandlePS =
+					dx12Helper.FillNextConstantBufferAndGetGPUDescriptorHandle(
+						(void*)(&psData), sizeof(PixelShaderExternalData));
+				
+				// Set this constant buffer handle
+				// Note: This assumes that descriptor table 1 is the
+				// place to put this particular descriptor. This
+				// is based on how we set up our root signature.
+				commandList->SetGraphicsRootDescriptorTable(1, cbHandlePS);
+			}
+			
 			VertexShaderExternalData vertexShaderData = {};
 			vertexShaderData.world = renderableList[i].GetTransform().GetWorldMatrix();
 			vertexShaderData.view = camera->GetView();
 			vertexShaderData.projection = camera->GetProjection();
+			vertexShaderData.worldInvTranspose = renderableList[i].GetTransform().GetWorldInverseTransposeMatrix();
 
 			D3D12_GPU_DESCRIPTOR_HANDLE vsbDescriptorHandle = dx12Helper.FillNextConstantBufferAndGetGPUDescriptorHandle(&vertexShaderData, sizeof(VertexShaderExternalData));
 			commandList->SetGraphicsRootDescriptorTable(0, vsbDescriptorHandle);

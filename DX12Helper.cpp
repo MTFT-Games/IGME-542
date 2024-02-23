@@ -1,10 +1,13 @@
 #include "DX12Helper.h"
 #include "WICTextureLoader.h"
 #include "ResourceUploadBatch.h"
+#include "PathHelpers.h"
 using namespace DirectX;
 
 // Singleton requirement
 DX12Helper* DX12Helper::instance;
+
+#define ASSET_PATH L"../../Assets/"
 
 DX12Helper::~DX12Helper()
 {
@@ -159,9 +162,13 @@ D3D12_CPU_DESCRIPTOR_HANDLE DX12Helper::LoadTexture(const wchar_t* file, bool ge
 	ResourceUploadBatch upload(device.Get());
 	upload.Begin();
 
+	std::wstring path = ASSET_PATH;
+	path += L"Textures/";
+	path += file;
+
 	// Attempt to create the texture
 	Microsoft::WRL::ComPtr<ID3D12Resource> texture;
-	CreateWICTextureFromFile(device.Get(), upload, file, texture.GetAddressOf(), generateMips);
+	CreateWICTextureFromFile(device.Get(), upload, FixPath(path).c_str(), texture.GetAddressOf(), generateMips);
 	
 	// Perform the upload and wait for it to finish before returning the texture
 	auto finish = upload.End(commandQueue.Get());

@@ -22,6 +22,7 @@ cbuffer ExternalData : register(b0)
     matrix world;
     matrix view;
     matrix projection;
+    matrix worldInvTranspose;
 }
 
 // Struct representing the data we're sending down the pipeline
@@ -37,6 +38,10 @@ struct VertexToPixel
 	//  |    |                |
 	//  v    v                v
 	float4 screenPosition	: SV_POSITION;	// XYZW position (System Value Position)
+    float2 uv               : TEXCOORD;
+	float3 normal           : NORMAL;
+    float3 tangent          : TANGENT;
+	float3 worldPos         : POSITION;
 };
 
 // --------------------------------------------------------
@@ -59,6 +64,12 @@ VertexToPixel main( VertexShaderInput input )
     output.screenPosition = mul(wvp, float4(input.localPosition, 1.0f));
 	// X and Y must be between -1 and 1 to be on screen and Z between 0 and 1.  
 	// These will be divided by the W component automatically
+	
+    output.tangent = mul((float3x3) world, input.tangent);
+    output.normal = mul((float3x3) worldInvTranspose, input.normal);
+	output.worldPos = mul(world, float4(input.localPosition, 1)).xyz;
+    output.uv = input.uv;
+
 
 	// Whatever we return will make its way through the pipeline to the
 	// next programmable stage we're using (the pixel shader for now)

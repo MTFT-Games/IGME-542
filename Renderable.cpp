@@ -1,7 +1,7 @@
 #include "Renderable.h"
 
-Renderable::Renderable(std::shared_ptr<Mesh> _mesh, /*std::shared_ptr<Material> _material,*/ DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 rotation, DirectX::XMFLOAT3 scale) :
-    mesh(_mesh)//, material(_material)
+Renderable::Renderable(std::shared_ptr<Mesh> _mesh, std::shared_ptr<Material> _material, DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 rotation, DirectX::XMFLOAT3 scale) :
+    mesh(_mesh), material(_material)
 {
 	transform.SetPosition(position);
 	transform.setRotation(rotation);
@@ -18,7 +18,7 @@ Transform& Renderable::GetTransform()
     return transform;
 }
 
-/*void Renderable::SetMaterial(std::shared_ptr<Material> _material)
+void Renderable::SetMaterial(std::shared_ptr<Material> _material)
 {
 	material = _material;
 }
@@ -28,7 +28,7 @@ std::shared_ptr<Material> Renderable::GetMaterial()
 	return material;
 }
 
-void Renderable::Draw(std::shared_ptr<Camera> camera)
+/*void Renderable::Draw(std::shared_ptr<Camera> camera)
 {
 	// Set material shaders TODO: A better system could optimize this with all renderables with the same shaders grouped to prevent excessive switching	
 	material->PrepareMaterial();

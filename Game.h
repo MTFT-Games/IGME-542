@@ -9,6 +9,7 @@
 #include "Mesh.h"
 #include "Renderable.h"
 #include "DX12Helper.h"
+#include "Lights.h"
 
 class Game 
 	: public DXCore
@@ -49,6 +50,9 @@ private:
 
 	std::vector<std::shared_ptr<Mesh>> meshList;
 	std::vector<Renderable> renderableList;
+
+	Light lights[20];
+	int lightCount;
 
 	DX12Helper& dx12Helper;
 };
