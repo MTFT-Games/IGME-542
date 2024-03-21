@@ -4,6 +4,7 @@
 #include "PathHelpers.h"
 #include "BufferStructs.h"
 #include "WICTextureLoader.h"
+#include "RaytracingHelper.h"
 
 // Needed for a helper function to load pre-compiled shader files
 #pragma comment(lib, "d3dcompiler.lib")
@@ -30,6 +31,8 @@ Game::Game(HINSTANCE hInstance)
 		true),  			// Show extra stats (fps) in title bar?
 	ibView({}),
 	vbView({}),
+	lights(),
+	lightCount(0),
 	dx12Helper(DX12Helper::GetInstance())
 {
 #if defined(DEBUG) || defined(_DEBUG)
@@ -56,6 +59,7 @@ Game::~Game()
 	// We need to wait here until the GPU
 	// is actually done with its work
 	dx12Helper.WaitForGPU();
+	delete& RaytracingHelper::GetInstance();
 }
 
 // --------------------------------------------------------
@@ -64,6 +68,15 @@ Game::~Game()
 // --------------------------------------------------------
 void Game::Init()
 {
+	// Attempt to initialize DXR
+	RaytracingHelper::GetInstance().Initialize(
+		windowWidth,
+		windowHeight,
+		device,
+		commandQueue,
+		commandList,
+		FixPath(L"Raytracing.cso"));
+
 	// Helper methods for loading shaders, creating some basic
 	// geometry to draw and some simple camera matrices.
 	// - You'll be expanding and/or replacing these later
@@ -355,14 +368,14 @@ void Game::CreateBasicGeometry()
 	D3D12_CPU_DESCRIPTOR_HANDLE scratchedNormals = dx12Helper.LoadTexture(L"scratched_normals.png");
 	D3D12_CPU_DESCRIPTOR_HANDLE scratchedRoughness = dx12Helper.LoadTexture(L"scratched_roughness.png");
 
-	std::shared_ptr<Material> cobbleMaterial = std::make_shared<Material>(pipelineState, XMFLOAT3(1, 1, 1), XMFLOAT2(1, 1), XMFLOAT2(0, 0));
+	std::shared_ptr<Material> cobbleMaterial = std::make_shared<Material>(pipelineState, XMFLOAT3(1, 0.5, 0.5), XMFLOAT2(1, 1), XMFLOAT2(0, 0));
 	cobbleMaterial->AddTexture(cobblestoneAlbedo, 0);
 	cobbleMaterial->AddTexture(cobblestoneNormals, 1);
 	cobbleMaterial->AddTexture(cobblestoneMetal, 2);
 	cobbleMaterial->AddTexture(cobblestoneRoughness, 3);
 	cobbleMaterial->FinalizeMaterial();
 
-	std::shared_ptr<Material> scratchedMaterial = std::make_shared<Material>(pipelineState, XMFLOAT3(1, 1, 1), XMFLOAT2(1, 1), XMFLOAT2(0, 0));
+	std::shared_ptr<Material> scratchedMaterial = std::make_shared<Material>(pipelineState, XMFLOAT3(0.5, 1, 0.5), XMFLOAT2(1, 1), XMFLOAT2(0, 0));
 	scratchedMaterial->AddTexture(scratchedAlbedo, 0);
 	scratchedMaterial->AddTexture(scratchedNormals, 1);
 	scratchedMaterial->AddTexture(scratchedMetal, 2);
@@ -380,10 +393,13 @@ void Game::CreateBasicGeometry()
 	renderableList.push_back(Renderable(meshList[0], cobbleMaterial, XMFLOAT3(0, 0, 0)));
 	renderableList.push_back(Renderable(meshList[1], cobbleMaterial, XMFLOAT3(0, 3, 0)));
 	renderableList.push_back(Renderable(meshList[2], cobbleMaterial, XMFLOAT3(3, 0, 0)));
-	renderableList.push_back(Renderable(meshList[3], cobbleMaterial, XMFLOAT3(-3, 3, 0)));
+	renderableList.push_back(Renderable(meshList[0], cobbleMaterial, XMFLOAT3(-3, 3, 0)));
 	renderableList.push_back(Renderable(meshList[4], scratchedMaterial, XMFLOAT3(3, 3, 0)));
 	renderableList.push_back(Renderable(meshList[5], scratchedMaterial, XMFLOAT3(-3, 0, 0)));
 	renderableList.push_back(Renderable(meshList[6], scratchedMaterial, XMFLOAT3(0, -3, 0)));
+
+	// Meshes create their own BLAS's; we just need to create the TLAS for the scene here
+	RaytracingHelper::GetInstance().CreateTopLevelAccelerationStructureForScene(renderableList);
 }
 
 
@@ -397,6 +413,7 @@ void Game::OnResize()
 	// Handle base-level DX resize stuff
 	DXCore::OnResize();
 	camera->SetAspect((float)(windowWidth / windowHeight));
+	RaytracingHelper::GetInstance().ResizeOutputUAV(windowWidth, windowHeight);
 }
 
 // --------------------------------------------------------
@@ -425,6 +442,7 @@ void Game::Draw(float deltaTime, float totalTime)
 	Microsoft::WRL::ComPtr<ID3D12Resource> currentBackBuffer = backBuffers[currentSwapBuffer];
 
 	// Clearing the render target
+		/* not needed for ray tracing
 	{
 		// Transition the back buffer from present to render target
 		D3D12_RESOURCE_BARRIER rb = {};
@@ -444,8 +462,9 @@ void Game::Draw(float deltaTime, float totalTime)
 			rtvHandles[currentSwapBuffer],
 			color,
 			0, 0); // No scissor rectangles
+			
 
-		// Clear the depth buffer, too
+		// Clear the depth buffer, too, 
 		commandList->ClearDepthStencilView(
 			dsvHandle,
 			D3D12_CLEAR_FLAG_DEPTH,
@@ -453,7 +472,9 @@ void Game::Draw(float deltaTime, float totalTime)
 			0, // Not clearing stencil, but need a value
 			0, 0); // No scissor rects
 	}
+	*/
 
+	/*
 	// Rendering here!
 	{
 
@@ -511,18 +532,19 @@ void Game::Draw(float deltaTime, float totalTime)
 			D3D12_GPU_DESCRIPTOR_HANDLE vsbDescriptorHandle = dx12Helper.FillNextConstantBufferAndGetGPUDescriptorHandle(&vertexShaderData, sizeof(VertexShaderExternalData));
 			commandList->SetGraphicsRootDescriptorTable(0, vsbDescriptorHandle);
 
-			D3D12_VERTEX_BUFFER_VIEW vbView = renderableList[i].GetMesh()->GetvbView();
-			D3D12_INDEX_BUFFER_VIEW ibView = renderableList[i].GetMesh()->GetibView();
+			D3D12_VERTEX_BUFFER_VIEW vbView = renderableList[i].GetMesh()->GetVBView();
+			D3D12_INDEX_BUFFER_VIEW ibView = renderableList[i].GetMesh()->GetIBView();
 
 			commandList->IASetVertexBuffers(0, 1, &vbView);
 			commandList->IASetIndexBuffer(&ibView);
 
 			commandList->DrawIndexedInstanced(renderableList[i].GetMesh()->GetIndexCount(), 1, 0, 0, 0);
 		}
-	}
+	}*/
 
 	// Present
 	{
+		/*
 		// Transition back to present
 		D3D12_RESOURCE_BARRIER rb = {};
 		rb.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -534,6 +556,26 @@ void Game::Draw(float deltaTime, float totalTime)
 		commandList->ResourceBarrier(1, &rb);
 		// Must occur BEFORE present
 		DX12Helper::GetInstance().CloseExecuteAndResetCommandList();
+		*/
+
+		
+		// Update raytracing accel structure
+		RaytracingHelper::GetInstance().
+			CreateTopLevelAccelerationStructureForScene(renderableList);
+
+		// Perform raytrace, including execution of command list
+		RaytracingHelper::GetInstance().Raytrace(
+			camera,
+			backBuffers[currentSwapBuffer]);
+
+		// Always wait before reseting command allocator, as it should not
+		// be reset while the GPU is processing a command list
+		// See: https://docs.microsoft.com/en-us/windows/desktop/api/d3d12/nf-d3d12-id3d12commandallocator-reset
+		DX12Helper::GetInstance().WaitForGPU();
+		commandAllocator->Reset();
+		commandList->Reset(commandAllocator.Get(), 0);
+		
+
 		// Present the current back buffer
 		bool vsyncNecessary = vsync || !deviceSupportsTearing || isFullscreen;
 		swapChain->Present(

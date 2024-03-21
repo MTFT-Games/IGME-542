@@ -45,3 +45,8 @@ DirectX::XMFLOAT2 Material::GetUVOffset()
 {
 	return uvOffset;
 }
+
+DirectX::XMFLOAT3 Material::GetColorTint()
+{
+	return colorTint;
+}

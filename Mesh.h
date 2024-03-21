@@ -4,6 +4,14 @@
 #include <d3d12.h>
 #include "vertex.h"
 
+struct MeshRaytracingData
+{
+	D3D12_GPU_DESCRIPTOR_HANDLE IndexbufferSRV{ };
+	D3D12_GPU_DESCRIPTOR_HANDLE VertexBufferSRV{ };
+	Microsoft::WRL::ComPtr<ID3D12Resource> BLAS;
+	unsigned int HitGroupIndex = 0;
+};
+
 // Mesh object containing geometry data
 class Mesh
 {
@@ -22,16 +30,20 @@ public:
 	Microsoft::WRL::ComPtr<ID3D12Resource> GetVertexBuffer();
 	// Get the index buffer pointer
 	Microsoft::WRL::ComPtr<ID3D12Resource> GetIndexBuffer();
-	D3D12_VERTEX_BUFFER_VIEW GetvbView();
-	D3D12_INDEX_BUFFER_VIEW GetibView();
+	D3D12_VERTEX_BUFFER_VIEW GetVBView();
+	D3D12_INDEX_BUFFER_VIEW GetIBView();
 	// Get the number of indexes (indices?) in the index buffer
 	unsigned int GetIndexCount();
+	unsigned int GetVertexCount();
 
 	// Draw this mesh
 	//void Draw();
 
+	MeshRaytracingData GetRaytracingData() { return raytracingData; }
 
 private:
+	MeshRaytracingData raytracingData;
+
 	// Buffers to hold actual geometry data
 	Microsoft::WRL::ComPtr<ID3D12Resource> vertexBuffer;
 	Microsoft::WRL::ComPtr<ID3D12Resource> indexBuffer;
@@ -42,6 +54,7 @@ private:
 
 	// Number of indexes (or indices?) in the index buffer
 	unsigned int indexCount;
+	unsigned int vertexCount;
 
 	void CalculateTangents(Vertex* verts, int numVerts, unsigned int* indices, int numIndices);
 };

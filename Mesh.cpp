@@ -3,35 +3,42 @@
 #include <vector>
 #include <DirectXMath.h>
 #include "DX12Helper.h"
+#include "RaytracingHelper.h"
 
 using namespace DirectX;
 
-Mesh::Mesh(Vertex* vertexData, unsigned int vertexCount, unsigned int* indexData, unsigned int _indexCount)
+Mesh::Mesh(Vertex* vertexData, unsigned int _vertexCount, unsigned int* indexData, unsigned int _indexCount)
 {
 	indexCount = _indexCount;
+	vertexCount = _vertexCount;
 
-	CalculateTangents(vertexData, vertexCount, indexData, indexCount);
+	CalculateTangents(vertexData, _vertexCount, indexData, indexCount);
 
 	DX12Helper& dx12Helper = DX12Helper::GetInstance();
 
 	// Create a vertex buffer on the gpu to hold the geometry of this mesh
-	vertexBuffer = dx12Helper.CreateStaticBuffer(sizeof(Vertex), vertexCount, vertexData);
+	vertexBuffer = dx12Helper.CreateStaticBuffer(sizeof(Vertex), _vertexCount, vertexData);
 
 	// Create an index buffer on the gpu to specify indexes of the vertex buffer to use
 	indexBuffer = dx12Helper.CreateStaticBuffer(sizeof(unsigned int), indexCount, indexData);
 
 	// Set up the views
 	vbView.StrideInBytes = sizeof(Vertex);
-	vbView.SizeInBytes = sizeof(Vertex) * vertexCount;
+	vbView.SizeInBytes = sizeof(Vertex) * _vertexCount;
 	vbView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
 
 	ibView.Format = DXGI_FORMAT_R32_UINT;
 	ibView.SizeInBytes = sizeof(unsigned int) * indexCount;
 	ibView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
+
+	raytracingData = RaytracingHelper::GetInstance().CreateBottomLevelAccelerationStructureForMesh(this);
 }
 
 Mesh::Mesh(const wchar_t* fileName):
-	indexCount(0)
+	indexCount(0),
+	ibView(),
+	vbView(),
+	vertexCount()
 {
 	// Author: Chris Cascioli
 	// Purpose: Basic .OBJ 3D model loading, supporting positions, uvs and normals
@@ -261,12 +268,14 @@ Mesh::Mesh(const wchar_t* fileName):
 	// 
 	// - "vertCounter" is the number of vertices
 	// - "indexCounter" is the number of indices
+	vertexCount = vertCounter;
  	indexCount = indexCounter;
 	// - Yes, these are effectively the same since OBJs do not index entire vertices!  This means
 	//    an index buffer isn't doing much for us.  We could try to optimize the mesh ourselves
 	//    and detect duplicate vertices, but at that point it would be better to use a more
 	//    sophisticated model loading library like TinyOBJLoader or The Open Asset Importer Library
 
+	raytracingData = RaytracingHelper::GetInstance().CreateBottomLevelAccelerationStructureForMesh(this);
 }
 
 // --------------------------------------------------------
@@ -355,12 +364,12 @@ Microsoft::WRL::ComPtr<ID3D12Resource> Mesh::GetIndexBuffer()
 	return indexBuffer;
 }
 
-D3D12_VERTEX_BUFFER_VIEW Mesh::GetvbView()
+D3D12_VERTEX_BUFFER_VIEW Mesh::GetVBView()
 {
 	return vbView;
 }
 
-D3D12_INDEX_BUFFER_VIEW Mesh::GetibView()
+D3D12_INDEX_BUFFER_VIEW Mesh::GetIBView()
 {
 	return ibView;
 }
@@ -368,6 +377,11 @@ D3D12_INDEX_BUFFER_VIEW Mesh::GetibView()
 unsigned int Mesh::GetIndexCount()
 {
 	return indexCount;
+}
+
+unsigned int Mesh::GetVertexCount()
+{
+	return vertexCount;
 }
 
 /* Im guessing this wont work anymore in dx12 untill updated

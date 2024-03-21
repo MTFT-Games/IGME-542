@@ -16,6 +16,7 @@ public:
 	D3D12_GPU_DESCRIPTOR_HANDLE GetFinalGPUHandleForSRVs();
 	DirectX::XMFLOAT2 GetUVScale();
 	DirectX::XMFLOAT2 GetUVOffset();
+	DirectX::XMFLOAT3 GetColorTint();
 
 private:
 	DirectX::XMFLOAT3 colorTint;

@@ -89,7 +89,7 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12Resource> backBuffers[numBackBuffers];
 	Microsoft::WRL::ComPtr<ID3D12Resource> depthStencilBuffer;
 
-	D3D12_VIEWPORT viewport;
+	D3D12_VIEWPORT viewport = {};
 	D3D12_RECT scissorRect;
 
 	// Helper function for allocating a console window
